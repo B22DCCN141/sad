@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanh toán | Gemini Bookstore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto px-6 py-12 max-w-4xl">
+        <button onclick="window.location.href='index.html'" class="mb-6 text-indigo-600 hover:underline">
+            <i class="fas fa-arrow-left"></i> Quay lại cửa hàng
+        </button>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                    <h2 class="text-xl font-bold mb-4"><i class="fas fa-truck text-indigo-500 mr-2"></i> Phương thức vận chuyển</h2>
+                    <select id="ship-method" class="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="Standard">Giao hàng tiêu chuẩn (3-5 ngày)</option>
+                        <option value="Express">Giao hàng hỏa tốc (24h)</option>
+                        <option value="Grab">Giao qua Grab/Ahamove</option>
+                    </select>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                    <h2 class="text-xl font-bold mb-4"><i class="fas fa-credit-card text-indigo-500 mr-2"></i> Phương thức thanh toán</h2>
+                    <div class="space-y-3">
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pay-method" value="COD" checked class="mr-3">
+                            <span>Thanh toán khi nhận hàng (COD)</span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pay-method" value="Banking" class="mr-3">
+                            <span>Chuyển khoản ngân hàng</span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pay-method" value="Momo" class="mr-3">
+                            <span>Ví điện tử MoMo</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-2xl shadow-lg border border-indigo-100 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold mb-6">Tóm tắt đơn hàng</h2>
+                    <div id="checkout-items" class="space-y-4 mb-6">
+                        </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <button id="btn-confirm" onclick="processOrder()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-700 transition transform hover:scale-[1.02]">
+                        XÁC NHẬN THANH TOÁN
+                    </button>
+                    <p class="text-center text-gray-400 text-xs mt-4 uppercase tracking-widest">Powered by Microservices</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="success-overlay" class="fixed inset-0 bg-white z-[200] hidden flex flex-col items-center justify-center text-center p-6">
+            <div class="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center text-5xl mb-6">
+                <i class="fas fa-check"></i>
+            </div>
+            <h1 class="text-3xl font-bold mb-2">Đặt hàng thành công!</h1>
+            <p class="text-gray-600 max-w-md mb-8">Đơn hàng của bạn đã được chuyển đến <b>Order Service</b>. Hệ thống đang kích hoạt <b>Pay Service</b> và <b>Ship Service</b>...</p>
+            <div class="flex gap-4">
+                <button onclick="window.location.href='index.html'" class="px-6 py-2 bg-gray-100 rounded-lg font-bold">Về trang chủ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://localhost:8000/api";
+        const userId = localStorage.getItem('userId');
+
+        async function loadCheckoutData() {
+            if(!userId) return window.location.href = 'index.html';
+
+            const res = await fetch(`${API}/carts/${userId}/`);
+            const cart = await res.json();
+            const container = document.getElementById('checkout-items');
+
+            if(cart.items && cart.items.length > 0) {
+                container.innerHTML = cart.items.map(i => `
+                    <div class="flex justify-between text-sm">
+                        <span>Sách ID: ${i.book_id} x ${i.quantity}</span>
+                        <span class="font-bold">Đã thêm</span>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = "<p class='text-red-500'>Giỏ hàng của bạn đang trống!</p>";
+                document.getElementById('btn-confirm').disabled = true;
+            }
+        }
+
+        async function processOrder() {
+            const btn = document.getElementById('btn-confirm');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true;
+
+            const shipMethod = document.getElementById('ship-method').value;
+            const payMethod = document.querySelector('input[name="pay-method"]:checked').value;
+
+            try {
+                // Gửi request đến Order Service thông qua Gateway
+                const response = await fetch(`${API}/orders/`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        customer_id: userId,
+                        ship_method: shipMethod,
+                        pay_method: payMethod
+                    })
+                });
+
+                if(response.ok) {
+                    document.getElementById('success-overlay').classList.remove('hidden');
+                } else {
+                    alert("Lỗi khi tạo đơn hàng. Hãy kiểm tra lại Docker logs!");
+                    btn.innerHTML = 'XÁC NHẬN THANH TOÁN';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Không thể kết nối tới Gateway!");
+            }
+        }
+
+        window.onload = loadCheckoutData;
+    </script>
+</body>
+</html>

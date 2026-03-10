@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết sách | Gemini Bookstore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .star-active { color: #fbbf24; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <nav class="bg-white shadow-sm px-6 py-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <button onclick="window.location.href='index.html'" class="text-indigo-600 font-bold">
+                <i class="fas fa-arrow-left mr-2"></i> Quay lại cửa hàng
+            </button>
+            <div id="user-display" class="text-sm font-medium"></div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 max-w-5xl">
+        <div class="bg-white rounded-3xl shadow-sm border overflow-hidden flex flex-col md:flex-row mb-10">
+            <div class="md:w-1/2 bg-indigo-50 flex items-center justify-center p-20">
+                <i class="fas fa-book text-[120px] text-indigo-200"></i>
+            </div>
+
+            <div class="md:w-1/2 p-10">
+                <span class="bg-indigo-100 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full uppercase">Sách chính hãng</span>
+                <h1 id="book-title" class="text-4xl font-extrabold mt-4 mb-2 text-gray-900 leading-tight">Đang tải...</h1>
+                <p id="book-author" class="text-xl text-gray-500 mb-6"></p>
+
+                <div class="flex items-baseline gap-4 mb-8">
+                    <span id="book-price" class="text-3xl font-black text-indigo-600"></span>
+                    <span class="text-gray-400 line-through text-lg">99.000đ</span>
+                </div>
+
+                <div class="space-y-4 mb-10">
+                    <div class="flex items-center gap-3 text-gray-600">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <span>Còn hàng trong kho: <b id="book-stock">--</b> quyển</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-gray-600">
+                        <i class="fas fa-shipping-fast text-blue-500"></i>
+                        <span>Giao hàng nhanh trong 24h</span>
+                    </div>
+                </div>
+
+                <button onclick="addToCart()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">
+                    <i class="fas fa-cart-plus mr-2"></i> THÊM VÀO GIỎ HÀNG
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border p-10">
+            <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <i class="fas fa-star text-yellow-400"></i> Khách hàng đánh giá
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <div class="md:col-span-1 border-r pr-10">
+                    <h3 class="font-bold mb-4">Gửi nhận xét của bạn</h3>
+                    <div class="flex gap-2 text-2xl mb-4" id="star-selector">
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400" onclick="setStar(1)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400" onclick="setStar(2)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400" onclick="setStar(3)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400" onclick="setStar(4)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400" onclick="setStar(5)"></i>
+                    </div>
+                    <textarea id="comment-text" placeholder="Bạn thấy sách này thế nào?" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 h-32 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                    <button onclick="submitReview()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">GỬI NHẬN XÉT</button>
+                </div>
+
+                <div class="md:col-span-2 space-y-6" id="reviews-list">
+                    <p class="text-gray-400 italic">Chưa có đánh giá nào cho cuốn sách này.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API = "http://localhost:8000/api";
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get('id');
+        let selectedStars = 0;
+
+        async function loadBookDetail() {
+            if (!bookId) return window.location.href = 'index.html';
+
+            // Gọi Book Service qua Gateway
+            const res = await fetch(`${API}/books/${bookId}/`);
+            const b = await res.json();
+
+            document.getElementById('book-title').innerText = b.title;
+            document.getElementById('book-author').innerText = "Tác giả: " + (b.author || "Chưa cập nhật");
+            document.getElementById('book-price').innerText = Number(b.price).toLocaleString() + "đ";
+            document.getElementById('book-stock').innerText = b.stock;
+
+            if(localStorage.getItem('userName')) {
+                document.getElementById('user-display').innerText = "Chào, " + localStorage.getItem('userName');
+            }
+        }
+
+        function setStar(n) {
+            selectedStars = n;
+            const stars = document.querySelectorAll('#star-selector i');
+            stars.forEach((s, i) => {
+                if (i < n) {
+                    s.classList.replace('far', 'fas');
+                    s.classList.add('star-active');
+                } else {
+                    s.classList.replace('fas', 'far');
+                    s.classList.remove('star-active');
+                }
+            });
+        }
+
+        async function submitReview() {
+            const uid = localStorage.getItem('userId');
+            if(!uid) return alert("Vui lòng đăng nhập!");
+            if(selectedStars === 0) return alert("Vui lòng chọn số sao!");
+
+            const comment = document.getElementById('comment-text').value;
+
+            // Gọi Rating Service qua Gateway
+            const res = await fetch(`${API}/ratings/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    book_id: bookId,
+                    customer_id: uid,
+                    stars: selectedStars,
+                    comment: comment
+                })
+            });
+
+            if(res.ok) {
+                alert("Đánh giá thành công!");
+                location.reload();
+            }
+        }
+
+        async function addToCart() {
+            const uid = localStorage.getItem('userId');
+            if(!uid) return alert("Vui lòng đăng nhập!");
+            await fetch(`${API}/carts/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({customer_id: uid, book_id: bookId, quantity: 1})
+            });
+            alert("Đã thêm vào giỏ hàng!");
+        }
+
+        window.onload = loadBookDetail;
+    </script>
+</body>
+</html>
