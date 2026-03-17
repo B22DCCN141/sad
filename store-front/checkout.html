@@ -54,7 +54,7 @@
                     <button id="btn-confirm" onclick="processOrder()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-700 transition transform hover:scale-[1.02]">
                         XÁC NHẬN THANH TOÁN
                     </button>
-                    <p class="text-center text-gray-400 text-xs mt-4 uppercase tracking-widest">Powered by Microservices</p>
+                    <p class="text-center text-gray-400 text-xs mt-4 uppercase tracking-widest"></p>
                 </div>
             </div>
         </div>
@@ -75,6 +75,10 @@
         const API = "http://localhost:8000/api";
         const userId = localStorage.getItem('userId');
 
+        // Giả sử Dũng truyền danh sách ID sách cần mua qua URL (ví dụ: checkout.html?items=1,2)
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedItems = urlParams.get('items') ? urlParams.get('items').split(',') : [];
+
         async function loadCheckoutData() {
             if(!userId) return window.location.href = 'index.html';
 
@@ -82,15 +86,32 @@
             const cart = await res.json();
             const container = document.getElementById('checkout-items');
 
-            if(cart.items && cart.items.length > 0) {
-                container.innerHTML = cart.items.map(i => `
-                    <div class="flex justify-between text-sm">
-                        <span>Sách ID: ${i.book_id} x ${i.quantity}</span>
-                        <span class="font-bold">Đã thêm</span>
-                    </div>
-                `).join('');
+            // Lọc ra những item người dùng đã tick từ trang cart
+            const itemsToBuy = cart.items.filter(i => selectedItems.includes(i.book_id.toString()));
+
+            if(itemsToBuy.length > 0) {
+                // Gọi sang Book Service để lấy tên sách dựa trên ID
+                const itemHtmls = await Promise.all(itemsToBuy.map(async (i) => {
+                    try {
+                        const bookRes = await fetch(`${API}/books/${i.book_id}/`);
+                        const bookData = await bookRes.json();
+                        return `
+                            <div class="flex justify-between text-sm border-b pb-2">
+                                <div>
+                                    <p class="font-bold text-indigo-900">${bookData.title || 'Sách không tên'}</p>
+                                    <p class="text-xs text-gray-500">Số lượng: ${i.quantity}</p>
+                                </div>
+                                <span class="font-bold text-indigo-600">${(bookData.price * i.quantity).toLocaleString()}đ</span>
+                            </div>
+                        `;
+                    } catch (e) {
+                        return `<div class="text-sm">Sách ID: ${i.book_id} (Không load được tên)</div>`;
+                    }
+                }));
+
+                container.innerHTML = itemHtmls.join('');
             } else {
-                container.innerHTML = "<p class='text-red-500'>Giỏ hàng của bạn đang trống!</p>";
+                container.innerHTML = "<p class='text-red-500 font-bold'>Vui lòng chọn sản phẩm từ giỏ hàng trước!</p>";
                 document.getElementById('btn-confirm').disabled = true;
             }
         }
@@ -100,34 +121,41 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             btn.disabled = true;
 
+            // Lấy danh sách ID sách đã tick từ URL (ví dụ: ?items=1,2,3)
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemsRaw = urlParams.get('items');
+            const selectedItems = itemsRaw ? itemsRaw.split(',').map(id => parseInt(id)) : [];
+
             const shipMethod = document.getElementById('ship-method').value;
             const payMethod = document.querySelector('input[name="pay-method"]:checked').value;
 
             try {
-                // Gửi request đến Order Service thông qua Gateway
                 const response = await fetch(`${API}/orders/`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        customer_id: userId,
+                        customer_id: parseInt(userId),
                         ship_method: shipMethod,
-                        pay_method: payMethod
+                        pay_method: payMethod,
+                        selected_items: selectedItems // Gửi danh sách ID để Backend biết đường mà xóa
                     })
                 });
 
                 if(response.ok) {
+                    // Hiện overlay thành công
                     document.getElementById('success-overlay').classList.remove('hidden');
                 } else {
-                    alert("Lỗi khi tạo đơn hàng. Hãy kiểm tra lại Docker logs!");
+                    const errorData = await response.json();
+                    alert("Lỗi: " + (errorData.error || "Không thể tạo đơn hàng"));
                     btn.innerHTML = 'XÁC NHẬN THANH TOÁN';
                     btn.disabled = false;
                 }
             } catch (e) {
                 console.error(e);
-                alert("Không thể kết nối tới Gateway!");
+                alert("Lỗi kết nối Gateway!");
+                btn.disabled = false;
             }
         }
-
         window.onload = loadCheckoutData;
     </script>
 </body>

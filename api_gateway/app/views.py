@@ -26,24 +26,41 @@ class GatewayView(APIView):
     def handle_request(self, request, service_name, path=None):
         base_url = self.SERVICE_MAP.get(service_name)
         if not base_url:
-            return Response({"error": f"Service '{service_name}' không tồn tại."}, status=404)
+            return Response({"error": "Service not found"}, status=404)
 
-        # Xây dựng URL đầy đủ
-        url = base_url if not path else f"{base_url}{path}/"
+        # 1. Tạo URL gốc sạch (ví dụ: http://cart-service:8000/carts/)
+        url = base_url.rstrip('/') + '/'
+
+        # 2. Nối phần path (ví dụ: 3/items/1)
+        if path:
+            # strip('/') để dọn dẹp dấu gạch chéo thừa, sau đó thêm / ở cuối
+            url += str(path).strip('/') + '/'
+
+        # Log để Dũng xem link cuối cùng trong Docker terminal
+        print(f"\n[GATEWAY] Forwarding to: {url}")
 
         try:
             method = request.method.lower()
-            # Chuyển tiếp request đi
-            resp = requests.request(
-                method=method,
-                url=url,
-                json=request.data if method != 'get' else None,
-                params=request.GET,
-                timeout=10
-            )
-            return Response(resp.json(), status=resp.status_code)
+            request_kwargs = {
+                "method": method,
+                "url": url,
+                "params": request.GET,
+                "timeout": 10
+            }
+            if method in ['post', 'put', 'patch', 'delete'] and request.data:
+                request_kwargs["json"] = request.data
+
+            resp = requests.request(**request_kwargs)
+
+            if resp.status_code == 204 or not resp.text.strip():
+                return Response(None, status=resp.status_code)
+
+            try:
+                return Response(resp.json(), status=resp.status_code)
+            except ValueError:
+                return Response({"detail": "Not JSON", "raw": resp.text[:100]}, status=resp.status_code)
         except Exception as e:
-            return Response({"error": f"Lỗi Gateway: {str(e)}"}, status=500)
+            return Response({"error": str(e)}, status=500)
 
     # Chấp nhận mọi phương thức
     def get(self, request, service_name, path=None):

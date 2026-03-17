@@ -37,16 +37,42 @@ class CartAction(APIView):
             return Response({"error": "Cart empty"}, status=404)
 
     # Thêm sản phẩm vào giỏ
+        # 2. Thêm/Sửa sản phẩm
     def post(self, request):
-        customer_id = request.data.get("customer_id")
-        book_id = request.data.get("book_id")
-        quantity = int(request.data.get("quantity", 1))
+        cust_id = request.data.get('customer_id')
+        book_id = request.data.get('book_id')
+        qty = int(request.data.get('quantity', 1))
+        mode = request.data.get('mode', 'add')
 
-        cart, _ = Cart.objects.get_or_create(customer_id=customer_id)
-        item, created = CartItem.objects.get_or_create(cart=cart, book_id=book_id)
-        if not created:
-            item.quantity += quantity
+        # Tìm hoặc tạo Giỏ hàng cha
+        cart, _ = Cart.objects.get_or_create(customer_id=cust_id)
+
+        # Tìm hoặc tạo Dòng chi tiết (CartItem)
+        item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            book_id=book_id,
+            defaults={'quantity': 0}
+        )
+
+        if mode == 'overwrite':
+            item.quantity = qty
         else:
-            item.quantity = quantity
+            item.quantity += qty
+
         item.save()
-        return Response({"message": "Updated"}, status=201)
+        return Response({"status": "Success"}, status=200)
+
+    # 3. Xóa sản phẩm
+    def delete(self, request, customer_id, book_id=None):
+        cart = Cart.objects.filter(customer_id=customer_id).first()
+        if not cart:
+            return Response(status=204)
+
+        if book_id:
+            # Xóa đúng món đó trong giỏ
+            cart.items.filter(book_id=book_id).delete()
+        else:
+            # Xóa cả giỏ (khi thanh toán xong)
+            cart.delete()
+
+        return Response(status=204)

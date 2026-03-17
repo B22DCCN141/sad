@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Giỏ hàng của bạn | Bookstore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <nav class="bg-white shadow-sm px-6 py-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <button onclick="window.location.href='index.html'" class="text-indigo-600 font-bold">
+                <i class="fas fa-arrow-left mr-2"></i> Tiếp tục mua sắm
+            </button>
+            <h1 class="text-xl font-black italic text-indigo-600 underline">GIỎ HÀNG CỦA BẠN</h1>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 max-w-4xl">
+        <div class="bg-white rounded-3xl shadow-sm border p-8">
+            <div id="cart-list" class="space-y-6">
+                <p class="text-center text-gray-400 italic">Đang tải giỏ hàng...</p>
+            </div>
+
+            <div class="mt-10 border-t pt-8">
+                <div class="flex justify-between items-center mb-8">
+                    <span class="text-gray-500 font-medium text-lg">Tổng tiền chọn mua:</span>
+                    <span id="total-price" class="text-3xl font-black text-red-600">0đ</span>
+                </div>
+                <button onclick="goToCheckout()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition">
+                    TIẾN HÀNH THANH TOÁN <i class="fas fa-chevron-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API = "http://localhost:8000/api";
+        const userId = localStorage.getItem('userId');
+        let currentCartItems = []; // Lưu trữ để tính toán lại tiền khi tick
+
+        async function loadCart() {
+            if (!userId) return window.location.href = 'index.html';
+
+            try {
+                const [cartRes, bookRes] = await Promise.all([
+                    fetch(`${API}/carts/${userId}/`),
+                    fetch(`${API}/books/`)
+                ]);
+
+                const cart = await cartRes.json();
+                const books = await bookRes.json();
+                const container = document.getElementById('cart-list');
+
+                if (!cart.items || cart.items.length === 0) {
+                    container.innerHTML = `<div class="text-center py-10"><p class="text-gray-400 italic">Giỏ hàng trống.</p></div>`;
+                    document.getElementById('total-price').innerText = "0đ";
+                    return;
+                }
+
+                // Kết hợp dữ liệu sách vào item giỏ hàng để dễ xử lý
+                currentCartItems = cart.items.map(item => {
+                    const book = books.find(b => b.id === item.book_id) || { title: "Sách đã bị gỡ", price: 0 };
+                    return { ...item, book_title: book.title, book_price: Number(book.price) };
+                });
+
+                container.innerHTML = currentCartItems.map(item => `
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border mb-4">
+                        <div class="flex items-center gap-4">
+                            <input type="checkbox"
+                                   class="item-checkbox w-6 h-6 cursor-pointer accent-indigo-600"
+                                   value="${item.book_id}"
+                                   data-subtotal="${item.book_price * item.quantity}"
+                                   onchange="updateSelectedTotal()"
+                                   checked>
+
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg">${item.book_title}</h4>
+                                <p class="text-indigo-600">${item.book_price.toLocaleString()}đ</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center bg-white border rounded-xl overflow-hidden shadow-sm">
+                                <button onclick="decreaseQty(${item.book_id}, ${item.quantity})"
+                                        class="px-4 py-2 hover:bg-red-50 text-red-600 font-bold">-</button>
+
+                                <span class="px-4 py-2 border-x font-bold min-w-[50px] text-center">${item.quantity}</span>
+
+                                <button onclick="increaseQty(${item.book_id}, ${item.quantity})"
+                                        class="px-4 py-2 hover:bg-green-50 text-green-600 font-bold">+</button>
+                            </div>
+
+                            <button onclick="removeItem(${item.book_id})" class="text-gray-400 hover:text-red-600 p-2">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>`).join('');
+
+                updateSelectedTotal(); // Tính tổng tiền lần đầu
+            } catch (e) { console.error("Lỗi:", e); }
+        }
+
+        // Hàm tính lại tổng tiền dựa trên các ô đã tick
+        function updateSelectedTotal() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            let total = 0;
+            checkboxes.forEach(cb => {
+                total += Number(cb.getAttribute('data-subtotal'));
+            });
+            document.getElementById('total-price').innerText = total.toLocaleString() + "đ";
+        }
+
+        // Hàm gom ID đã chọn để sang trang Thanh toán
+        function goToCheckout() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert("Vui lòng chọn ít nhất 1 cuốn sách để thanh toán!");
+                return;
+            }
+
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value).join(',');
+            // Chuyển hướng kèm danh sách ID qua URL
+            window.location.href = `checkout.html?items=${selectedIds}`;
+        }
+
+        async function increaseQty(bookId, currentQty) {
+            const newQty = Number(currentQty) + 1;
+            await updateCartAPI(bookId, newQty);
+        }
+
+        async function decreaseQty(bookId, currentQty) {
+            const newQty = Number(currentQty) - 1;
+            if (newQty < 1) return removeItem(bookId);
+            await updateCartAPI(bookId, newQty);
+        }
+
+        async function updateCartAPI(bookId, quantity) {
+            const uid = localStorage.getItem('userId');
+            if (!uid) return;
+            try {
+                const response = await fetch(`${API}/carts/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_id: parseInt(uid),
+                        book_id: parseInt(bookId),
+                        quantity: parseInt(quantity),
+                        mode: 'overwrite'
+                    })
+                });
+                if (response.ok) loadCart();
+            } catch (e) { console.error("Lỗi kết nối:", e); }
+        }
+
+        async function removeItem(bookId) {
+            const uid = localStorage.getItem('userId');
+            if (!confirm("Xóa sản phẩm này khỏi giỏ hàng?")) return;
+            try {
+                const res = await fetch(`${API}/carts/${uid}/items/${bookId}/`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) loadCart();
+            } catch (e) { alert("Lỗi khi xóa!"); }
+        }
+
+        window.onload = loadCart;
+    </script>
+</body>
+</html>
