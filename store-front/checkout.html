@@ -5,6 +5,10 @@
     <title>Thanh toán | Gemini Bookstore</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -75,7 +79,31 @@
         const API = "http://localhost:8000/api";
         const userId = localStorage.getItem('userId');
 
-        // Giả sử Dũng truyền danh sách ID sách cần mua qua URL (ví dụ: checkout.html?items=1,2)
+        function fallbackImage(text) {
+            const safeText = String(text || 'Product').slice(0, 28)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+            const svg = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+                    <defs>
+                        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#0f172a"/>
+                            <stop offset="100%" stop-color="#334155"/>
+                        </linearGradient>
+                    </defs>
+                    <rect width="600" height="800" fill="url(#g)"/>
+                    <rect x="86" y="108" width="428" height="584" rx="30" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.14)"/>
+                    <text x="50%" y="44%" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Bookstore</text>
+                    <text x="50%" y="53%" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#cbd5e1">${safeText}</text>
+                    <text x="50%" y="89%" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#e2e8f0">No image</text>
+                </svg>`;
+            return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+        }
+
+        // Truyền danh sách item_key dạng type:id qua URL (ví dụ: checkout.html?items=book:1,electronic:2)
         const urlParams = new URLSearchParams(window.location.search);
         const selectedItems = urlParams.get('items') ? urlParams.get('items').split(',') : [];
 
@@ -87,27 +115,21 @@
             const container = document.getElementById('checkout-items');
 
             // Lọc ra những item người dùng đã tick từ trang cart
-            const itemsToBuy = cart.items.filter(i => selectedItems.includes(i.book_id.toString()));
+            const itemsToBuy = cart.items.filter(i => selectedItems.includes(i.item_key));
 
             if(itemsToBuy.length > 0) {
-                // Gọi sang Book Service để lấy tên sách dựa trên ID
-                const itemHtmls = await Promise.all(itemsToBuy.map(async (i) => {
-                    try {
-                        const bookRes = await fetch(`${API}/books/${i.book_id}/`);
-                        const bookData = await bookRes.json();
-                        return `
-                            <div class="flex justify-between text-sm border-b pb-2">
-                                <div>
-                                    <p class="font-bold text-indigo-900">${bookData.title || 'Sách không tên'}</p>
-                                    <p class="text-xs text-gray-500">Số lượng: ${i.quantity}</p>
-                                </div>
-                                <span class="font-bold text-indigo-600">${(bookData.price * i.quantity).toLocaleString()}đ</span>
+                const itemHtmls = itemsToBuy.map(i => `
+                    <div class="flex justify-between text-sm border-b pb-2">
+                        <div class="flex items-center gap-3">
+                            <img src="${i.image_url || fallbackImage(i.title || 'item')}" class="w-12 h-12 rounded-lg object-cover border" alt="${i.title || 'item'}" onerror="this.onerror=null;this.src='${fallbackImage(i.title || 'item')}'">
+                            <div>
+                                <p class="font-bold text-indigo-900">${i.title || 'Sản phẩm không tên'}</p>
+                                <p class="text-xs text-gray-500">${i.product_type.toUpperCase()} • SL: ${i.quantity}</p>
                             </div>
-                        `;
-                    } catch (e) {
-                        return `<div class="text-sm">Sách ID: ${i.book_id} (Không load được tên)</div>`;
-                    }
-                }));
+                        </div>
+                        <span class="font-bold text-indigo-600">${Number(i.subtotal).toLocaleString()}đ</span>
+                    </div>
+                `);
 
                 container.innerHTML = itemHtmls.join('');
             } else {
@@ -121,10 +143,10 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             btn.disabled = true;
 
-            // Lấy danh sách ID sách đã tick từ URL (ví dụ: ?items=1,2,3)
+            // Lấy danh sách item_key đã tick từ URL (ví dụ: ?items=book:1,electronic:2)
             const urlParams = new URLSearchParams(window.location.search);
             const itemsRaw = urlParams.get('items');
-            const selectedItems = itemsRaw ? itemsRaw.split(',').map(id => parseInt(id)) : [];
+            const selectedItems = itemsRaw ? itemsRaw.split(',') : [];
 
             const shipMethod = document.getElementById('ship-method').value;
             const payMethod = document.querySelector('input[name="pay-method"]:checked').value;

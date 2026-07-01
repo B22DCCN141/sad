@@ -2,6 +2,7 @@ import requests
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from .models import Order, OrderItem
 
 
 class OrderAction(APIView):
@@ -11,7 +12,9 @@ class OrderAction(APIView):
 
     def post(self, request, pk=None):
         customer_id = request.data.get('customer_id')
-        # Danh sách ID sách người dùng đã tick từ trang Cart
+        ship_method = request.data.get('ship_method')
+        pay_method = request.data.get('pay_method')
+        # Danh sách item_key dạng "type:id" người dùng đã tick từ trang Cart
         selected_items = request.data.get('selected_items', [])
 
         if not selected_items:
@@ -28,20 +31,49 @@ class OrderAction(APIView):
             all_items = cart_data.get('items', [])
 
             # 2. Lọc ra những món hàng thực sự nằm trong danh sách đã tick
-            # Ép kiểu string để so sánh cho chắc
-            sel_ids = [str(sid) for sid in selected_items]
-            items_to_delete = [i for i in all_items if str(i['book_id']) in sel_ids]
+            sel_keys = [str(sid) for sid in selected_items]
+            items_to_order = [i for i in all_items if str(i.get('item_key')) in sel_keys]
 
-            # 3. LOGIC XÓA: Gọi lệnh DELETE sang Cart Service cho từng món
-            # Dùng đúng cái URL carts/<uid>/items/<bid>/ mà Dũng bảo là chạy ổn rồi
-            for item in items_to_delete:
-                book_id = item['book_id']
-                requests.delete(f"http://cart-service:8000/carts/{customer_id}/items/{book_id}/")
+            if not items_to_order:
+                return Response({"error": "Không có sản phẩm hợp lệ để thanh toán"}, status=400)
 
-            # 4. Trả về thành công để Frontend hiện Overlay
+            # 3. Tạo order và order items
+            total = sum(float(i.get('subtotal', 0)) for i in items_to_order)
+            order = Order.objects.create(
+                customer_id=customer_id,
+                total=total,
+                ship_method=ship_method,
+                pay_method=pay_method,
+                status='Processing',
+            )
+
+            for item in items_to_order:
+                p_type = item.get('product_type', 'book')
+                p_id = item.get('product_id', item.get('book_id'))
+                OrderItem.objects.create(
+                    order=order,
+                    book_id=p_id if p_type == 'book' else None,
+                    product_type=p_type,
+                    product_id=p_id,
+                    quantity=int(item.get('quantity', 1)),
+                    price=float(item.get('price', 0)),
+                )
+
+            # 4. Xóa item đã thanh toán khỏi cart
+            for item in items_to_order:
+                p_type = item.get('product_type', 'book')
+                p_id = item.get('product_id', item.get('book_id'))
+                requests.delete(
+                    f"http://cart-service:8000/carts/{customer_id}/items/{p_id}/",
+                    params={'product_type': p_type},
+                    timeout=3,
+                )
+
+            # 5. Trả về thành công để Frontend hiện Overlay
             return Response({
                 "status": "Success",
-                "message": f"Đã thanh toán và xóa {len(items_to_delete)} món khỏi giỏ hàng"
+                "order_id": order.id,
+                "message": f"Đã thanh toán và xóa {len(items_to_order)} món khỏi giỏ hàng"
             }, status=201)
 
         except Exception as e:

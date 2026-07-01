@@ -24,10 +24,13 @@ class OrderItem(models.Model):
     # Liên kết với bảng Order ở trên
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
 
-    # Thông tin sách
-    book_id = models.IntegerField()
+    # Legacy field for old flows
+    book_id = models.IntegerField(null=True, blank=True)
+    product_type = models.CharField(max_length=20, default='book')
+    product_id = models.IntegerField(null=True, blank=True)
     quantity = models.IntegerField(default=1)
     price = models.DecimalField(max_digits=15, decimal_places=2)  # Lưu giá tại thời điểm mua
 
     def __str__(self):
-        return f"{self.quantity} x BookID {self.book_id} (Order {self.order.id})"
+        pid = self.product_id if self.product_id is not None else self.book_id
+        return f"{self.quantity} x {self.product_type}:{pid} (Order {self.order.id})"

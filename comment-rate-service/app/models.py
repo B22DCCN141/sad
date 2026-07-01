@@ -3,7 +3,10 @@ from django.db import models
 from django.utils import timezone
 
 class Rating(models.Model):
-    book_id = models.IntegerField()
+    # Legacy field for existing book-only records
+    book_id = models.IntegerField(null=True, blank=True)
+    product_type = models.CharField(max_length=20, default='book')
+    product_id = models.IntegerField(null=True, blank=True)
     customer_id = models.IntegerField()
     stars = models.IntegerField()
     comment = models.TextField(null=True, blank=True)

@@ -2,3 +2,6 @@ django
 djangorestframework
 requests
 django-cors-headers
+neo4j
+python-dotenv
+pandas

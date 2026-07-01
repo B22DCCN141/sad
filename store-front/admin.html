@@ -1,198 +1,669 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | Bookstore</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard | Bookstore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 </head>
-<body class="bg-gray-100 text-gray-800">
-    <nav class="bg-indigo-900 text-white p-4 flex justify-between items-center shadow-lg">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-user-shield text-2xl"></i>
-            <span class="text-xl font-bold">Quản Trị Hệ Thống</span>
-        </div>
-        <div class="flex items-center gap-4">
-            <span id="admin-name" class="font-medium"></span>
-            <button onclick="window.location.href='index.html'" class="text-sm bg-indigo-700 px-3 py-1 rounded hover:bg-indigo-600">Về trang chủ</button>
-            <button onclick="logout()" class="text-red-400 hover:text-red-300"><i class="fas fa-sign-out-alt"></i></button>
-        </div>
-    </nav>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
 
-    <main class="container mx-auto px-6 py-8">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-bold">Quản lý kho sách</h2>
-            <button onclick="openBookModal()" class="bg-green-500 text-white px-6 py-2 rounded-lg shadow-lg hover:bg-green-600 flex items-center gap-2">
-                <i class="fas fa-plus"></i> Thêm sách mới
-            </button>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden border">
-            <table class="w-full text-left">
-                <thead class="bg-gray-50 border-b">
-                    <tr>
-                        <th class="px-6 py-4 font-semibold text-gray-600">Thông tin sách</th>
-                        <th class="px-6 py-4 font-semibold text-gray-600">Giá</th>
-                        <th class="px-6 py-4 font-semibold text-gray-600">Kho</th>
-                        <th class="px-6 py-4 text-center font-semibold text-gray-600">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody id="staff-table-body"></tbody>
-            </table>
-        </div>
-    </main>
+<!-- ══════════════════════════ NAVBAR ══════════════════════════ -->
+<nav class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center shadow-lg">
+  <div class="flex items-center gap-3">
+    <i class="fas fa-user-shield text-2xl"></i>
+    <span class="text-xl font-bold">Quản Trị Hệ Thống</span>
+  </div>
+  <div class="flex items-center gap-4">
+    <span id="admin-name" class="font-medium text-indigo-200"></span>
+    <button onclick="window.location.href='index.html'"
+      class="text-sm bg-indigo-700 hover:bg-indigo-600 px-4 py-1.5 rounded-lg transition">
+      <i class="fas fa-home mr-1"></i>Trang chủ
+    </button>
+    <button onclick="logout()" class="text-red-400 hover:text-red-200 transition">
+      <i class="fas fa-sign-out-alt text-lg"></i>
+    </button>
+  </div>
+</nav>
 
-    <div id="book-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[100] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-2xl p-8 relative">
-            <h2 id="book-modal-title" class="text-xl font-bold mb-6">Thông tin sách</h2>
-            <input type="hidden" id="edit-id">
-            <div class="grid grid-cols-1 gap-4">
-                <input type="text" id="book-title" placeholder="Tên sách" class="p-3 border rounded-lg">
-                <input type="text" id="book-author" placeholder="Tác giả" class="p-3 border rounded-lg">
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="number" id="book-price" placeholder="Giá" class="p-3 border rounded-lg">
-                    <input type="number" id="book-stock" placeholder="Kho" class="p-3 border rounded-lg">
-                </div>
-                <button onclick="saveBook()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold">LƯU DỮ LIỆU</button>
-                <button onclick="closeBookModal()" class="w-full text-gray-400 mt-2">Hủy</button>
-            </div>
-        </div>
+<!-- ══════════════════════════ MAIN ══════════════════════════ -->
+<div class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- TAB BAR -->
+  <div class="flex gap-2 mb-0 border-b border-gray-300">
+    <button id="btn-books" onclick="switchTab('books')"
+      class="flex items-center gap-2 px-6 py-3 font-semibold rounded-t-lg border-b-2 border-indigo-600 text-indigo-700 bg-white transition">
+      <i class="fas fa-book"></i> Quản lý Sách
+    </button>
+    <button id="btn-electronics" onclick="switchTab('electronics')"
+      class="flex items-center gap-2 px-6 py-3 font-semibold rounded-t-lg border-b-2 border-transparent text-gray-500 bg-gray-100 hover:bg-white hover:text-indigo-600 transition">
+      <i class="fas fa-microchip"></i> Thiết bị Điện tử
+    </button>
+    <button id="btn-clothes" onclick="switchTab('clothes')"
+      class="flex items-center gap-2 px-6 py-3 font-semibold rounded-t-lg border-b-2 border-transparent text-gray-500 bg-gray-100 hover:bg-white hover:text-pink-600 transition">
+      <i class="fas fa-tshirt"></i> Quần áo
+    </button>
+  </div>
+
+  <!-- ══════ TAB: SÁCH ══════ -->
+  <div id="tab-books" class="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-t-0 p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-bold flex items-center gap-2">
+        <i class="fas fa-book text-indigo-500"></i> Kho Sách
+      </h2>
+      <button onclick="openModal('book')"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-plus"></i> Thêm sách mới
+      </button>
     </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">#</th>
+            <th class="px-4 py-3">Tên sách</th>
+            <th class="px-4 py-3">Tác giả</th>
+            <th class="px-4 py-3">Giá</th>
+            <th class="px-4 py-3">Kho</th>
+            <th class="px-4 py-3 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="body-books">
+          <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    <script>
-        const API = "http://localhost:8000/api";
+  <!-- ══════ TAB: ĐIỆN TỬ ══════ -->
+  <div id="tab-electronics" class="hidden bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-t-0 p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold flex items-center gap-2">
+        <i class="fas fa-microchip text-cyan-500"></i> Thiết bị Điện tử
+      </h2>
+      <div class="flex items-center gap-3">
+        <select id="elec-cat" onchange="loadElectronics()" class="text-sm border rounded-lg px-3 py-2">
+          <option value="">Tất cả danh mục</option>
+          <option value="phone">📱 Điện thoại</option>
+          <option value="laptop">💻 Laptop</option>
+          <option value="tablet">📟 Máy tính bảng</option>
+          <option value="tv">📺 Tivi</option>
+          <option value="audio">🔊 Âm thanh</option>
+          <option value="camera">📷 Camera</option>
+          <option value="accessory">🔌 Phụ kiện</option>
+          <option value="other">📦 Khác</option>
+        </select>
+        <button onclick="openModal('elec')"
+          class="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg flex items-center gap-2 transition">
+          <i class="fas fa-plus"></i> Thêm thiết bị
+        </button>
+      </div>
+    </div>
+    <!-- Stats -->
+    <div id="elec-stats" class="grid grid-cols-3 gap-4 mb-5"></div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">#</th>
+            <th class="px-4 py-3">Sản phẩm</th>
+            <th class="px-4 py-3">Danh mục</th>
+            <th class="px-4 py-3">Giá</th>
+            <th class="px-4 py-3">Kho</th>
+            <th class="px-4 py-3">Bảo hành</th>
+            <th class="px-4 py-3 text-center">Trạng thái</th>
+            <th class="px-4 py-3 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="body-electronics">
+          <tr><td colspan="8" class="px-4 py-10 text-center text-gray-400">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-        window.onload = () => {
-            const role = localStorage.getItem('userRole');
-            if (role !== 'admin') {
-                alert("Bạn không có quyền truy cập trang này!");
-                window.location.href = 'index.html';
-                return;
-            }
-            document.getElementById('admin-name').innerText = localStorage.getItem('userName');
-            loadStaffTable();
-        };
+  <!-- ══════ TAB: QUẦN ÁO ══════ -->
+  <div id="tab-clothes" class="hidden bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-t-0 p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold flex items-center gap-2">
+        <i class="fas fa-tshirt text-pink-500"></i> Quần áo &amp; Thời trang
+      </h2>
+      <div class="flex items-center gap-3">
+        <select id="cloth-cat" onchange="loadClothes()" class="text-sm border rounded-lg px-3 py-2">
+          <option value="">Tất cả danh mục</option>
+          <option value="shirt">👔 Áo sơ mi</option>
+          <option value="tshirt">👕 Áo thun</option>
+          <option value="pants">👖 Quần dài</option>
+          <option value="shorts">🩳 Quần short</option>
+          <option value="dress">👗 Đầm / Váy</option>
+          <option value="jacket">🧥 Áo khoác</option>
+          <option value="sportswear">🏃 Đồ thể thao</option>
+          <option value="accessory">👜 Phụ kiện</option>
+          <option value="other">📦 Khác</option>
+        </select>
+        <select id="cloth-size" onchange="loadClothes()" class="text-sm border rounded-lg px-3 py-2">
+          <option value="">Mọi size</option>
+          <option>XS</option><option>S</option><option>M</option>
+          <option>L</option><option>XL</option><option>XXL</option>
+          <option value="freesize">Free Size</option>
+        </select>
+        <button onclick="openModal('cloth')"
+          class="bg-pink-600 hover:bg-pink-700 text-white px-5 py-2 rounded-lg flex items-center gap-2 transition">
+          <i class="fas fa-plus"></i> Thêm sản phẩm
+        </button>
+      </div>
+    </div>
+    <!-- Stats -->
+    <div id="cloth-stats" class="grid grid-cols-3 gap-4 mb-5"></div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">#</th>
+            <th class="px-4 py-3">Sản phẩm</th>
+            <th class="px-4 py-3">Danh mục</th>
+            <th class="px-4 py-3">Size</th>
+            <th class="px-4 py-3">Màu</th>
+            <th class="px-4 py-3">Giá</th>
+            <th class="px-4 py-3">Kho</th>
+            <th class="px-4 py-3 text-center">Trạng thái</th>
+            <th class="px-4 py-3 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="body-clothes">
+          <tr><td colspan="9" class="px-4 py-10 text-center text-gray-400">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-        async function loadStaffTable() {
-            try {
-                const res = await fetch(`${API}/books/`);
-                const books = await res.json();
-                const tbody = document.getElementById('staff-table-body');
+<!-- ══════════════════════════ MODAL SÁCH ══════════════════════════ -->
+<div id="modal-book" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8">
+    <h3 id="modal-book-title" class="text-lg font-bold mb-5 flex items-center gap-2">
+      <i class="fas fa-book text-indigo-500"></i> Thêm sách mới
+    </h3>
+    <input type="hidden" id="book-id"/>
+    <div class="space-y-3">
+      <input id="book-title" type="text" placeholder="Tên sách *"
+        class="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+      <input id="book-author" type="text" placeholder="Tác giả"
+        class="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="book-price" type="number" placeholder="Giá (VNĐ) *"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+        <input id="book-stock" type="number" placeholder="Tồn kho"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+      </div>
+    </div>
+    <div class="mt-5 space-y-2">
+      <button onclick="saveBook()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold transition">
+        <i class="fas fa-save mr-2"></i>Lưu dữ liệu
+      </button>
+      <button onclick="closeModal('book')"
+        class="w-full text-gray-400 hover:text-gray-600 py-2 transition">Hủy</button>
+    </div>
+  </div>
+</div>
 
-                tbody.innerHTML = books.map(b => `
-                    <tr class="border-b hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 font-medium text-gray-500">#${b.id}</td>
-                        <td class="px-6 py-4 font-bold text-gray-700">${b.title}</td>
-                        <td class="px-6 py-4 text-indigo-600 font-semibold">${Number(b.price).toLocaleString()}đ</td>
-                        <td class="px-6 py-4">
-                            <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-xs font-bold">
-                                ${b.stock} quyển
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <button onclick="editBook(${b.id})" class="text-blue-600 hover:text-blue-800 font-medium mr-4">
-                                <i class="fas fa-edit"></i> Sửa
-                            </button>
-                            <button onclick="deleteBook(${b.id})" class="text-red-500 hover:text-red-700 font-medium">
-                                <i class="fas fa-trash"></i> Xóa
-                            </button>
-                        </td>
-                    </tr>`).join('');
-            } catch (e) {
-                console.error("Không thể tải danh sách sách:", e);
-            }
-        }
+<!-- ══════════════════════════ MODAL ĐIỆN TỬ ══════════════════════════ -->
+<div id="modal-elec" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8">
+    <h3 id="modal-elec-title" class="text-lg font-bold mb-5 flex items-center gap-2">
+      <i class="fas fa-microchip text-cyan-500"></i> Thêm thiết bị mới
+    </h3>
+    <input type="hidden" id="elec-id"/>
+    <div class="space-y-3">
+      <input id="elec-name" type="text" placeholder="Tên sản phẩm *"
+        class="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400"/>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="elec-brand" type="text" placeholder="Thương hiệu *"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400"/>
+        <input id="elec-model" type="text" placeholder="Mã model"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400"/>
+      </div>
+      <select id="elec-category" class="w-full border rounded-lg px-4 py-3 text-gray-700">
+        <option value="phone">📱 Điện thoại</option>
+        <option value="laptop">💻 Laptop</option>
+        <option value="tablet">📟 Máy tính bảng</option>
+        <option value="tv">📺 Tivi</option>
+        <option value="audio">🔊 Âm thanh</option>
+        <option value="camera">📷 Camera</option>
+        <option value="accessory">🔌 Phụ kiện</option>
+        <option value="other">📦 Khác</option>
+      </select>
+      <textarea id="elec-desc" rows="2" placeholder="Mô tả sản phẩm"
+        class="w-full border rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400"></textarea>
+      <div class="grid grid-cols-3 gap-3">
+        <input id="elec-price" type="number" placeholder="Giá (VNĐ) *"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400"/>
+        <input id="elec-stock" type="number" placeholder="Tồn kho"
+          class="border rounded-lg px-4 py-3"/>
+        <input id="elec-warranty" type="number" placeholder="Bảo hành (tháng)"
+          class="border rounded-lg px-4 py-3"/>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <input id="elec-active" type="checkbox" checked class="w-4 h-4 accent-cyan-600"/>
+        Đang kinh doanh
+      </label>
+    </div>
+    <div class="mt-5 space-y-2">
+      <button onclick="saveElec()"
+        class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition">
+        <i class="fas fa-save mr-2"></i>Lưu dữ liệu
+      </button>
+      <button onclick="closeModal('elec')"
+        class="w-full text-gray-400 hover:text-gray-600 py-2 transition">Hủy</button>
+    </div>
+  </div>
+</div>
 
-        async function editBook(id) {
-            try {
-                // Gọi API lấy chi tiết cuốn sách để tránh undefined
-                const res = await fetch(`${API}/books/${id}/`);
-                const b = await res.json();
+<!-- ══════════════════════════ MODAL QUẦN ÁO ══════════════════════════ -->
+<div id="modal-cloth" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8">
+    <h3 id="modal-cloth-title" class="text-lg font-bold mb-5 flex items-center gap-2">
+      <i class="fas fa-tshirt text-pink-500"></i> Thêm sản phẩm mới
+    </h3>
+    <input type="hidden" id="cloth-id"/>
+    <div class="space-y-3">
+      <input id="cloth-name" type="text" placeholder="Tên sản phẩm *"
+        class="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400"/>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="cloth-brand" type="text" placeholder="Thương hiệu *"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400"/>
+        <input id="cloth-color" type="text" placeholder="Màu sắc"
+          class="border rounded-lg px-4 py-3"/>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <select id="cloth-category" class="border rounded-lg px-3 py-3 text-gray-700">
+          <option value="shirt">👔 Áo sơ mi</option>
+          <option value="tshirt">👕 Áo thun</option>
+          <option value="pants">👖 Quần dài</option>
+          <option value="shorts">🩳 Quần short</option>
+          <option value="dress">👗 Đầm / Váy</option>
+          <option value="jacket">🧥 Áo khoác</option>
+          <option value="sportswear">🏃 Thể thao</option>
+          <option value="accessory">👜 Phụ kiện</option>
+          <option value="other">📦 Khác</option>
+        </select>
+        <select id="cloth-size-field" class="border rounded-lg px-3 py-3 text-gray-700">
+          <option>XS</option><option>S</option><option selected>M</option>
+          <option>L</option><option>XL</option><option>XXL</option>
+          <option>XXXL</option><option value="freesize">Free Size</option>
+        </select>
+        <select id="cloth-gender" class="border rounded-lg px-3 py-3 text-gray-700">
+          <option value="unisex">Unisex</option>
+          <option value="male">Nam</option>
+          <option value="female">Nữ</option>
+          <option value="kid">Trẻ em</option>
+        </select>
+      </div>
+      <input id="cloth-material" type="text" placeholder="Chất liệu (cotton, len...)"
+        class="w-full border rounded-lg px-4 py-3"/>
+      <textarea id="cloth-desc" rows="2" placeholder="Mô tả sản phẩm"
+        class="w-full border rounded-lg px-4 py-3 resize-none"></textarea>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="cloth-price" type="number" placeholder="Giá (VNĐ) *"
+          class="border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-400"/>
+        <input id="cloth-stock" type="number" placeholder="Tồn kho"
+          class="border rounded-lg px-4 py-3"/>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <input id="cloth-active" type="checkbox" checked class="w-4 h-4 accent-pink-600"/>
+        Đang kinh doanh
+      </label>
+    </div>
+    <div class="mt-5 space-y-2">
+      <button onclick="saveCloth()"
+        class="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-bold transition">
+        <i class="fas fa-save mr-2"></i>Lưu dữ liệu
+      </button>
+      <button onclick="closeModal('cloth')"
+        class="w-full text-gray-400 hover:text-gray-600 py-2 transition">Hủy</button>
+    </div>
+  </div>
+</div>
 
-                if (b && b.id) {
-                    // Đổ dữ liệu vào Modal
-                    document.getElementById('edit-id').value = b.id;
-                    document.getElementById('book-title').value = b.title;
-                    document.getElementById('book-author').value = b.author;
-                    document.getElementById('book-price').value = b.price;
-                    document.getElementById('book-stock').value = b.stock;
+<!-- ══════════════════════════ SCRIPT ══════════════════════════ -->
+<script>
+const API = 'http://localhost:8000/api';
 
-                    // Đổi tiêu đề Modal và hiển thị
-                    document.getElementById('book-modal-title').innerText = "Cập nhật thông tin sách";
-                    document.getElementById('book-modal').classList.remove('hidden');
-                } else {
-                    alert("Không tìm thấy thông tin sách!");
-                }
-            } catch (e) {
-                alert("Lỗi khi lấy thông tin sách từ Server!");
-            }
-        }
+const ELEC_CAT = { phone:'📱 Điện thoại', laptop:'💻 Laptop', tablet:'📟 Máy tính bảng',
+  tv:'📺 Tivi', audio:'🔊 Âm thanh', camera:'📷 Camera', accessory:'🔌 Phụ kiện', other:'📦 Khác' };
+const CLOTH_CAT = { shirt:'👔 Áo sơ mi', tshirt:'👕 Áo thun', pants:'👖 Quần dài',
+  shorts:'🩳 Short', dress:'👗 Đầm/Váy', jacket:'🧥 Áo khoác',
+  sportswear:'🏃 Thể thao', accessory:'👜 Phụ kiện', other:'📦 Khác' };
+const GENDER = { male:'Nam', female:'Nữ', unisex:'Unisex', kid:'Trẻ em' };
 
-        function openBookModal() {
-            document.getElementById('edit-id').value = "";
-            document.getElementById('book-title').value = "";
-            document.getElementById('book-author').value = "";
-            document.getElementById('book-price').value = "";
-            document.getElementById('book-stock').value = "";
-            document.getElementById('book-modal').classList.remove('hidden');
-        }
+// ── Khởi tạo ──
+window.onload = () => {
+  const role = localStorage.getItem('userRole');
+  if (role !== 'admin') {
+    alert('Bạn không có quyền truy cập!');
+    window.location.href = 'index.html';
+    return;
+  }
+  document.getElementById('admin-name').textContent = localStorage.getItem('userName') || 'Admin';
+  loadBooks();
+};
 
-        async function saveBook() {
-            const id = document.getElementById('edit-id').value;
-            const data = {
-                title: document.getElementById('book-title').value,
-                author: document.getElementById('book-author').value,
-                price: parseInt(document.getElementById('book-price').value),
-                stock: parseInt(document.getElementById('book-stock').value)
-            };
+// ── Tab switch ──
+function switchTab(tab) {
+  ['books','electronics','clothes'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById('btn-' + t);
+    if (t === tab) {
+      btn.classList.add('border-indigo-600','text-indigo-700','bg-white');
+      btn.classList.remove('border-transparent','text-gray-500','bg-gray-100');
+    } else {
+      btn.classList.remove('border-indigo-600','text-indigo-700','bg-white');
+      btn.classList.add('border-transparent','text-gray-500','bg-gray-100');
+    }
+  });
+  if (tab === 'electronics') loadElectronics();
+  if (tab === 'clothes')     loadClothes();
+}
 
-            if (!data.title || !data.price) return alert("Vui lòng nhập tên và giá sách!");
+// ── Modal helpers ──
+function openModal(type)  { document.getElementById('modal-' + type).classList.remove('hidden'); }
+function closeModal(type) { document.getElementById('modal-' + type).classList.add('hidden'); }
 
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `${API}/books/${id}/` : `${API}/books/`;
+// ── Stats card ──
+function statsHtml(count, active, stock, color) {
+  return `
+    <div class="bg-${color}-50 border border-${color}-100 rounded-xl p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-${color}-100 flex items-center justify-center text-${color}-600">
+        <i class="fas fa-boxes"></i></div>
+      <div><div class="text-2xl font-bold text-gray-800">${count}</div>
+      <div class="text-xs text-gray-500">Tổng sản phẩm</div></div>
+    </div>
+    <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+        <i class="fas fa-check-circle"></i></div>
+      <div><div class="text-2xl font-bold text-gray-800">${active}</div>
+      <div class="text-xs text-gray-500">Đang kinh doanh</div></div>
+    </div>
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+        <i class="fas fa-warehouse"></i></div>
+      <div><div class="text-2xl font-bold text-gray-800">${stock}</div>
+      <div class="text-xs text-gray-500">Tổng tồn kho</div></div>
+    </div>`;
+}
 
-            try {
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+function badge(text, color)  {
+  return `<span class="bg-${color}-100 text-${color}-700 px-2.5 py-0.5 rounded-full text-xs font-semibold">${text}</span>`;
+}
+function actions(editFn, delFn) {
+  return `<div class="flex justify-center gap-3">
+    <button onclick="${editFn}" class="text-blue-600 hover:text-blue-800 font-medium"><i class="fas fa-edit"></i> Sửa</button>
+    <button onclick="${delFn}" class="text-red-500 hover:text-red-700 font-medium"><i class="fas fa-eye-slash"></i> Ẩn</button>
+  </div>`;
+}
+function emptyRow(cols, msg) {
+  return `<tr><td colspan="${cols}" class="px-4 py-10 text-center text-gray-400">${msg}</td></tr>`;
+}
+function errRow(cols, endpoint) {
+  return `<tr><td colspan="${cols}" class="px-4 py-8 text-center text-red-400">
+    Không thể kết nối API Gateway.<br/><code class="text-xs">${API}/${endpoint}/</code></td></tr>`;
+}
 
-                if (res.ok) {
-                    alert(id ? "Cập nhật thành công!" : "Thêm sách mới thành công!");
-                    closeBookModal();
-                    loadStaffTable();
-                } else {
-                    alert("Lưu thất bại! Hãy kiểm tra dữ liệu đầu vào.");
-                }
-            } catch (e) {
-                alert("Lỗi kết nối Gateway!");
-            }
-        }
+// ════════════════ BOOKS ════════════════
+async function loadBooks() {
+  const tbody = document.getElementById('body-books');
+  try {
+    const data = await (await fetch(`${API}/books/`)).json();
+    const books = Array.isArray(data) ? data : (data.results || []);
+    if (!books.length) { tbody.innerHTML = emptyRow(6, 'Chưa có sách nào.'); return; }
+    tbody.innerHTML = books.map(b => `
+      <tr class="border-b hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-400">#${b.id}</td>
+        <td class="px-4 py-3 font-semibold text-gray-800">${b.title}</td>
+        <td class="px-4 py-3 text-gray-500">${b.author || '–'}</td>
+        <td class="px-4 py-3 text-indigo-600 font-semibold">${Number(b.price).toLocaleString('vi-VN')}đ</td>
+        <td class="px-4 py-3">${badge(b.stock + ' quyển','blue')}</td>
+        <td class="px-4 py-3">${actions(`editBook(${b.id})`,`deleteBook(${b.id})`)}</td>
+      </tr>`).join('');
+  } catch { tbody.innerHTML = errRow(6, 'books'); }
+}
 
-        async function deleteBook(id) {
-            if (confirm(`Bạn có chắc muốn xóa cuốn sách #${id}?`)) {
-                try {
-                    // Nhớ để dấu / ở cuối URL trong JS nếu Gateway của Dũng nối chuỗi chưa chuẩn
-                    const res = await fetch(`${API}/books/${id}/`, {
-                        method: 'DELETE',
-                    });
+function openModal_book_new() {
+  ['book-id','book-title','book-author','book-price','book-stock'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modal-book-title').innerHTML = '<i class="fas fa-plus text-indigo-500 mr-2"></i>Thêm sách mới';
+  openModal('book');
+}
 
-                    // Kiểm tra status 204 hoặc 200/201
-                    if (res.status === 204 || res.ok) {
-                        alert("Đã xóa sách thành công!");
-                        loadStaffTable(); // Tải lại bảng dữ liệu
-                    } else {
-                        alert("Xóa thất bại! Vui lòng kiểm tra log service.");
-                    }
-                } catch (e) {
-                    alert("Lỗi kết nối Gateway!");
-                }
-            }
-        }
+async function editBook(id) {
+  try {
+    const b = await (await fetch(`${API}/books/${id}/`)).json();
+    document.getElementById('book-id').value = b.id;
+    document.getElementById('book-title').value = b.title;
+    document.getElementById('book-author').value = b.author || '';
+    document.getElementById('book-price').value = b.price;
+    document.getElementById('book-stock').value = b.stock;
+    document.getElementById('modal-book-title').innerHTML = '<i class="fas fa-edit text-indigo-500 mr-2"></i>Cập nhật sách';
+    openModal('book');
+  } catch { alert('Lỗi lấy dữ liệu!'); }
+}
 
-        function closeBookModal() { document.getElementById('book-modal').classList.add('hidden'); }
-        function logout() { localStorage.clear(); window.location.href = 'index.html'; }
-    </script>
+async function saveBook() {
+  const id = document.getElementById('book-id').value;
+  const data = {
+    title:  document.getElementById('book-title').value.trim(),
+    author: document.getElementById('book-author').value.trim(),
+    price:  parseFloat(document.getElementById('book-price').value),
+    stock:  parseInt(document.getElementById('book-stock').value) || 0,
+  };
+  if (!data.title || !data.price) return alert('Vui lòng nhập Tên và Giá!');
+  const res = await fetch(id ? `${API}/books/${id}/` : `${API}/books/`, {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (res.ok) { closeModal('book'); loadBooks(); }
+  else alert('Lưu thất bại!');
+}
+
+async function deleteBook(id) {
+  if (!confirm(`Xóa sách #${id}?`)) return;
+  const res = await fetch(`${API}/books/${id}/`, { method: 'DELETE' });
+  if (res.ok || res.status === 204) loadBooks();
+  else alert('Xóa thất bại!');
+}
+
+// ════════════════ ELECTRONICS ════════════════
+async function loadElectronics() {
+  const tbody = document.getElementById('body-electronics');
+  const cat = document.getElementById('elec-cat').value;
+  const url = `${API}/electronics/` + (cat ? `?category=${cat}` : '');
+  try {
+    const data = await (await fetch(url)).json();
+    const items = Array.isArray(data) ? data : (data.results || []);
+    document.getElementById('elec-stats').innerHTML = statsHtml(
+      data.count || items.length,
+      items.filter(i=>i.is_active).length,
+      items.reduce((s,i)=>s+i.stock,0), 'cyan');
+    if (!items.length) { tbody.innerHTML = emptyRow(8, 'Chưa có thiết bị nào.'); return; }
+    tbody.innerHTML = items.map(e => `
+      <tr class="border-b hover:bg-gray-50 ${!e.is_active?'opacity-50':''}">
+        <td class="px-4 py-3 text-gray-400">#${e.id}</td>
+        <td class="px-4 py-3">
+          <div class="font-semibold text-gray-800">${e.name}</div>
+          <div class="text-xs text-gray-400">${e.brand} · ${e.model_number||'–'}</div>
+        </td>
+        <td class="px-4 py-3">${badge(ELEC_CAT[e.category]||e.category,'purple')}</td>
+        <td class="px-4 py-3 text-cyan-600 font-semibold">${Number(e.price).toLocaleString('vi-VN')}đ</td>
+        <td class="px-4 py-3">${badge(e.stock+' cái','blue')}</td>
+        <td class="px-4 py-3 text-gray-500">${e.warranty_months} tháng</td>
+        <td class="px-4 py-3 text-center">${e.is_active?badge('Đang bán','green'):badge('Đã ẩn','gray')}</td>
+        <td class="px-4 py-3">${actions(`editElec(${e.id})`,`deleteElec(${e.id},'${e.name.replace(/'/g,'')}')`)}</td>
+      </tr>`).join('');
+  } catch { tbody.innerHTML = errRow(8,'electronics'); }
+}
+
+function clearElecForm() {
+  ['elec-id','elec-name','elec-brand','elec-model','elec-desc','elec-price','elec-stock','elec-warranty'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('elec-category').value = 'phone';
+  document.getElementById('elec-active').checked = true;
+}
+
+async function editElec(id) {
+  try {
+    const e = await (await fetch(`${API}/electronics/${id}/`)).json();
+    document.getElementById('elec-id').value = e.id;
+    document.getElementById('elec-name').value = e.name;
+    document.getElementById('elec-brand').value = e.brand;
+    document.getElementById('elec-model').value = e.model_number||'';
+    document.getElementById('elec-category').value = e.category;
+    document.getElementById('elec-desc').value = e.description||'';
+    document.getElementById('elec-price').value = e.price;
+    document.getElementById('elec-stock').value = e.stock;
+    document.getElementById('elec-warranty').value = e.warranty_months;
+    document.getElementById('elec-active').checked = e.is_active;
+    document.getElementById('modal-elec-title').innerHTML = '<i class="fas fa-edit text-cyan-500 mr-2"></i>Cập nhật thiết bị';
+    openModal('elec');
+  } catch { alert('Lỗi lấy dữ liệu!'); }
+}
+
+async function saveElec() {
+  const id = document.getElementById('elec-id').value;
+  const data = {
+    name: document.getElementById('elec-name').value.trim(),
+    brand: document.getElementById('elec-brand').value.trim(),
+    model_number: document.getElementById('elec-model').value.trim(),
+    category: document.getElementById('elec-category').value,
+    description: document.getElementById('elec-desc').value.trim(),
+    price: parseFloat(document.getElementById('elec-price').value),
+    stock: parseInt(document.getElementById('elec-stock').value)||0,
+    warranty_months: parseInt(document.getElementById('elec-warranty').value)||12,
+    is_active: document.getElementById('elec-active').checked,
+  };
+  if (!data.name||!data.brand||!data.price) return alert('Vui lòng nhập Tên, Thương hiệu và Giá!');
+  const res = await fetch(id ? `${API}/electronics/${id}/` : `${API}/electronics/`, {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (res.ok) { closeModal('elec'); loadElectronics(); }
+  else { const e=await res.json(); alert('Lỗi: '+JSON.stringify(e)); }
+}
+
+async function deleteElec(id, name) {
+  if (!confirm(`Ẩn thiết bị "${name}"?`)) return;
+  const res = await fetch(`${API}/electronics/${id}/`, { method:'DELETE' });
+  if (res.ok) loadElectronics(); else alert('Thao tác thất bại!');
+}
+
+// ════════════════ CLOTHES ════════════════
+async function loadClothes() {
+  const tbody = document.getElementById('body-clothes');
+  const cat  = document.getElementById('cloth-cat').value;
+  const size = document.getElementById('cloth-size').value;
+  const params = [cat&&`category=${cat}`, size&&`size=${size}`].filter(Boolean).join('&');
+  const url = `${API}/clothes/` + (params ? `?${params}` : '');
+  try {
+    const data = await (await fetch(url)).json();
+    const items = Array.isArray(data) ? data : (data.results || []);
+    document.getElementById('cloth-stats').innerHTML = statsHtml(
+      data.count||items.length,
+      items.filter(i=>i.is_active).length,
+      items.reduce((s,i)=>s+i.stock,0), 'pink');
+    if (!items.length) { tbody.innerHTML = emptyRow(9,'Chưa có sản phẩm nào.'); return; }
+    tbody.innerHTML = items.map(c => `
+      <tr class="border-b hover:bg-gray-50 ${!c.is_active?'opacity-50':''}">
+        <td class="px-4 py-3 text-gray-400">#${c.id}</td>
+        <td class="px-4 py-3">
+          <div class="font-semibold text-gray-800">${c.name}</div>
+          <div class="text-xs text-gray-400">${c.brand} · ${GENDER[c.gender]||c.gender}</div>
+        </td>
+        <td class="px-4 py-3">${badge(CLOTH_CAT[c.category]||c.category,'pink')}</td>
+        <td class="px-4 py-3">${badge(c.size,'yellow')}</td>
+        <td class="px-4 py-3 text-gray-600">${c.color||'–'}</td>
+        <td class="px-4 py-3 text-pink-600 font-semibold">${Number(c.price).toLocaleString('vi-VN')}đ</td>
+        <td class="px-4 py-3">${badge(c.stock+' cái','blue')}</td>
+        <td class="px-4 py-3 text-center">${c.is_active?badge('Đang bán','green'):badge('Đã ẩn','gray')}</td>
+        <td class="px-4 py-3">${actions(`editCloth(${c.id})`,`deleteCloth(${c.id},'${c.name.replace(/'/g,'')}')`)}</td>
+      </tr>`).join('');
+  } catch { tbody.innerHTML = errRow(9,'clothes'); }
+}
+
+async function editCloth(id) {
+  try {
+    const c = await (await fetch(`${API}/clothes/${id}/`)).json();
+    document.getElementById('cloth-id').value = c.id;
+    document.getElementById('cloth-name').value = c.name;
+    document.getElementById('cloth-brand').value = c.brand;
+    document.getElementById('cloth-color').value = c.color||'';
+    document.getElementById('cloth-category').value = c.category;
+    document.getElementById('cloth-size-field').value = c.size;
+    document.getElementById('cloth-gender').value = c.gender;
+    document.getElementById('cloth-material').value = c.material||'';
+    document.getElementById('cloth-desc').value = c.description||'';
+    document.getElementById('cloth-price').value = c.price;
+    document.getElementById('cloth-stock').value = c.stock;
+    document.getElementById('cloth-active').checked = c.is_active;
+    document.getElementById('modal-cloth-title').innerHTML = '<i class="fas fa-edit text-pink-500 mr-2"></i>Cập nhật sản phẩm';
+    openModal('cloth');
+  } catch { alert('Lỗi lấy dữ liệu!'); }
+}
+
+async function saveCloth() {
+  const id = document.getElementById('cloth-id').value;
+  const data = {
+    name:        document.getElementById('cloth-name').value.trim(),
+    brand:       document.getElementById('cloth-brand').value.trim(),
+    color:       document.getElementById('cloth-color').value.trim(),
+    category:    document.getElementById('cloth-category').value,
+    size:        document.getElementById('cloth-size-field').value,
+    gender:      document.getElementById('cloth-gender').value,
+    material:    document.getElementById('cloth-material').value.trim(),
+    description: document.getElementById('cloth-desc').value.trim(),
+    price:       parseFloat(document.getElementById('cloth-price').value),
+    stock:       parseInt(document.getElementById('cloth-stock').value)||0,
+    is_active:   document.getElementById('cloth-active').checked,
+  };
+  if (!data.name||!data.brand||!data.price) return alert('Vui lòng nhập Tên, Thương hiệu và Giá!');
+  const res = await fetch(id ? `${API}/clothes/${id}/` : `${API}/clothes/`, {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (res.ok) { closeModal('cloth'); loadClothes(); }
+  else { const e=await res.json(); alert('Lỗi: '+JSON.stringify(e)); }
+}
+
+async function deleteCloth(id, name) {
+  if (!confirm(`Ẩn sản phẩm "${name}"?`)) return;
+  const res = await fetch(`${API}/clothes/${id}/`, { method:'DELETE' });
+  if (res.ok) loadClothes(); else alert('Thao tác thất bại!');
+}
+
+// Gán lại openModal('book') để reset form
+const _openModal = openModal;
+window.openModal = function(type) {
+  if (type==='book') {
+    ['book-id','book-title','book-author','book-price','book-stock'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('modal-book-title').innerHTML='<i class="fas fa-plus text-indigo-500 mr-2"></i>Thêm sách mới';
+  }
+  if (type==='elec') {
+    clearElecForm();
+    document.getElementById('modal-elec-title').innerHTML='<i class="fas fa-plus text-cyan-500 mr-2"></i>Thêm thiết bị mới';
+  }
+  if (type==='cloth') {
+    ['cloth-id','cloth-name','cloth-brand','cloth-color','cloth-material','cloth-desc','cloth-price','cloth-stock'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('cloth-category').value='tshirt';
+    document.getElementById('cloth-size-field').value='M';
+    document.getElementById('cloth-gender').value='unisex';
+    document.getElementById('cloth-active').checked=true;
+    document.getElementById('modal-cloth-title').innerHTML='<i class="fas fa-plus text-pink-500 mr-2"></i>Thêm sản phẩm mới';
+  }
+  document.getElementById('modal-'+type).classList.remove('hidden');
+};
+
+function logout() { localStorage.clear(); window.location.href='index.html'; }
+</script>
 </body>
 </html>

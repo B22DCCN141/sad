@@ -8,4 +8,4 @@ class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
         # Liệt kê các trường trùng với Model Rating của Dũng
-        fields = ['id', 'book_id', 'customer_id', 'stars', 'comment', 'created_at']
+        fields = ['id', 'book_id', 'product_type', 'product_id', 'customer_id', 'stars', 'comment', 'created_at']

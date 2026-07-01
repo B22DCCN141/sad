@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết sản phẩm | Bookstore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .star-active { color: #fbbf24; }
+        .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <nav class="glass-nav sticky top-0 z-50 shadow-sm px-6 py-4 mb-8 border-b">
+        <div class="container mx-auto flex justify-between items-center">
+            <button onclick="window.location.href='index.html'" class="text-indigo-600 font-bold hover:text-indigo-800 transition">
+                <i class="fas fa-arrow-left mr-2"></i> Quay lai cua hang
+            </button>
+            <div id="user-display" class="text-sm font-medium text-gray-600"></div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 max-w-5xl">
+        <div class="bg-white rounded-3xl shadow-sm border overflow-hidden flex flex-col md:flex-row mb-10">
+            <div class="md:w-1/2 bg-indigo-50 flex items-center justify-center p-10">
+                <img id="product-image" src="https://placehold.co/600x800/e2e8f0/1f2937?text=Product" alt="product" class="rounded-2xl max-h-[460px] w-full object-cover border">
+            </div>
+
+            <div class="md:w-1/2 p-10">
+                <span id="product-badge" class="bg-indigo-100 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full uppercase">San pham</span>
+                <h1 id="product-title" class="text-4xl font-extrabold mt-4 mb-2 text-gray-900 leading-tight">Dang tai...</h1>
+                <p id="product-subtitle" class="text-xl text-gray-500 mb-6"></p>
+
+                <div class="flex items-baseline gap-4 mb-8">
+                    <span id="product-price" class="text-3xl font-black text-indigo-600">0d</span>
+                </div>
+
+                <div class="space-y-4 mb-10">
+                    <div class="flex items-center gap-3 text-gray-600">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <span>Con hang trong kho: <b id="product-stock">--</b></span>
+                    </div>
+                    <div class="flex items-center gap-3 text-gray-600">
+                        <i class="fas fa-shipping-fast text-blue-500"></i>
+                        <span>Giao hang nhanh trong 24h</span>
+                    </div>
+                </div>
+
+                <button onclick="addToCart()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform active:scale-95">
+                    <i class="fas fa-cart-plus mr-2"></i> THEM VAO GIO HANG
+                </button>
+
+                <div class="mt-8 rounded-3xl bg-slate-950 p-6 text-white shadow-2xl shadow-slate-900/20">
+                    <p class="text-[11px] uppercase tracking-[0.35em] text-cyan-200/80">Bookstore AI</p>
+                    <h3 class="mt-2 text-xl font-black">Gợi ý cùng hành trình</h3>
+                    <p class="mt-2 text-sm text-slate-300">Sau khi khách bấm thêm vào giỏ, KB_Graph sẽ trả về các sản phẩm liên quan và xu hướng chuyển đổi tiếp theo.</p>
+                    <div id="ai-cart-insights" class="mt-5 space-y-3"></div>
+                    <div id="ai-cart-suggestions" class="mt-5 space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border p-10 mb-20">
+            <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+                <i class="fas fa-star text-yellow-400"></i> Khach hang danh gia
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <div class="md:col-span-1 border-r pr-10">
+                    <h3 class="font-bold mb-4">Gui nhan xet cua ban</h3>
+                    <div class="flex gap-2 text-2xl mb-4" id="star-selector">
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400 transition" onclick="setStar(1)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400 transition" onclick="setStar(2)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400 transition" onclick="setStar(3)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400 transition" onclick="setStar(4)"></i>
+                        <i class="far fa-star cursor-pointer hover:text-yellow-400 transition" onclick="setStar(5)"></i>
+                    </div>
+                    <textarea id="comment-text" placeholder="Ban thay san pham nay the nao?" class="w-full p-4 bg-gray-50 border rounded-xl mb-4 h-32 focus:ring-2 focus:ring-indigo-500 outline-none transition"></textarea>
+                    <button onclick="submitReview()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">GUI NHAN XET</button>
+                </div>
+
+                <div class="md:col-span-2 space-y-6" id="reviews-list">
+                    <p class="text-gray-400 italic">Dang tai danh gia...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="ai-ecommerce.js"></script>
+    <script>
+        const API = "http://localhost:8000/api";
+        const params = new URLSearchParams(window.location.search);
+        const productType = (params.get('type') || 'book').toLowerCase();
+        const productId = parseInt(params.get('id'), 10);
+        let selectedStars = 0;
+
+        const TYPE_CONFIG = {
+            book: { endpoint: 'books', badge: 'Book', colorClass: 'bg-indigo-100 text-indigo-600' },
+            electronic: { endpoint: 'electronics', badge: 'Electronic', colorClass: 'bg-emerald-100 text-emerald-700' },
+            product: { endpoint: 'products', badge: 'Product', colorClass: 'bg-amber-100 text-amber-700' },
+        };
+
+        function placeholderImage(text) {
+            return `https://placehold.co/600x800/e2e8f0/1f2937?text=${encodeURIComponent(text || 'Product')}`;
+        }
+
+        async function init() {
+            if (!productId || !TYPE_CONFIG[productType]) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API}/${TYPE_CONFIG[productType].endpoint}/${productId}/`);
+                if (!res.ok) throw new Error('Product not found');
+                const p = await res.json();
+
+                const name = p.title || p.name || 'San pham';
+                const subtitle = p.author || p.brand || p.category_name || p.brand_name || '';
+                const price = Number(p.price || 0);
+                const stock = p.stock != null ? p.stock : '--';
+                const image = p.image_url || placeholderImage(name);
+
+                document.title = `Chi tiet - ${name}`;
+                document.getElementById('product-title').innerText = name;
+                document.getElementById('product-subtitle').innerText = subtitle;
+                document.getElementById('product-price').innerText = price.toLocaleString() + 'd';
+                document.getElementById('product-stock').innerText = stock;
+                document.getElementById('product-image').src = image;
+                document.getElementById('product-image').onerror = function () {
+                    this.onerror = null;
+                    this.src = placeholderImage(name);
+                };
+
+                const badge = document.getElementById('product-badge');
+                badge.innerText = TYPE_CONFIG[productType].badge;
+                badge.className = TYPE_CONFIG[productType].colorClass + ' text-xs font-bold px-3 py-1 rounded-full uppercase';
+
+                if (localStorage.getItem('userName')) {
+                    document.getElementById('user-display').innerText = 'Chao, ' + localStorage.getItem('userName');
+                }
+
+                loadReviews();
+            } catch (e) {
+                console.error(e);
+                alert('Khong tai duoc trang chi tiet san pham');
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function loadReviews() {
+            try {
+                const res = await fetch(`${API}/ratings/?product_type=${productType}&product_id=${productId}`);
+                const reviews = await res.json();
+                const list = document.getElementById('reviews-list');
+
+                if (Array.isArray(reviews) && reviews.length > 0) {
+                    list.innerHTML = reviews.map(r => `
+                        <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100 transition hover:shadow-md">
+                            <div class="flex justify-between items-center mb-3">
+                                <div>
+                                    <span class="font-bold text-indigo-600">Khach hang #${r.customer_id}</span>
+                                    <div class="text-yellow-400 text-xs mt-1">
+                                        ${'<i class="fas fa-star"></i>'.repeat(r.stars)}
+                                        ${'<i class="far fa-star"></i>'.repeat(5 - r.stars)}
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-400 italic">${r.created_at || 'Vua xong'}</span>
+                            </div>
+                            <p class="text-gray-700">${r.comment || 'Khong co noi dung.'}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<p class="text-gray-400 italic text-center py-10">Chua co danh gia nao cho san pham nay.</p>';
+                }
+            } catch (e) {
+                console.error('Loi load review', e);
+            }
+        }
+
+        function setStar(n) {
+            selectedStars = n;
+            const stars = document.querySelectorAll('#star-selector i');
+            stars.forEach((s, i) => {
+                if (i < n) {
+                    s.classList.replace('far', 'fas');
+                    s.classList.add('star-active');
+                } else {
+                    s.classList.replace('fas', 'far');
+                    s.classList.remove('star-active');
+                }
+            });
+        }
+
+        async function submitReview() {
+            const uid = localStorage.getItem('userId');
+            if (!uid) return alert('Vui long dang nhap de danh gia!');
+            if (selectedStars === 0) return alert('Vui long chon so sao!');
+
+            const comment = document.getElementById('comment-text').value;
+
+            try {
+                const payload = {
+                    product_type: productType,
+                    product_id: productId,
+                    customer_id: parseInt(uid, 10),
+                    stars: selectedStars,
+                    comment,
+                };
+                if (productType === 'book') payload.book_id = productId;
+
+                const res = await fetch(`${API}/ratings/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (res.ok) {
+                    alert('Gui danh gia thanh cong!');
+                    document.getElementById('comment-text').value = '';
+                    setStar(0);
+                    loadReviews();
+                } else {
+                    alert('Gui danh gia that bai!');
+                }
+            } catch (e) {
+                alert('Loi ket noi Rating Service!');
+            }
+        }
+
+        async function addToCart() {
+            const uid = localStorage.getItem('userId');
+            if (!uid) return alert('Vui long dang nhap!');
+
+            try {
+                await fetch(`${API}/carts/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_id: parseInt(uid, 10),
+                        product_type: productType,
+                        product_id: productId,
+                        quantity: 1,
+                    }),
+                });
+                alert('Da them vao gio hang!');
+                if (window.BookstoreAI) {
+                    window.BookstoreAI.cart({ user_id: Number(uid), product_ids: [productId], limit: 6 }).catch(() => {});
+                }
+            } catch (e) {
+                alert('Loi ket noi Cart Service!');
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -5,6 +5,10 @@
     <title>Giỏ hàng của bạn | Bookstore</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -33,8 +37,17 @@
                 </button>
             </div>
         </div>
+
+        <div class="mt-8 rounded-3xl bg-slate-950 p-6 text-white shadow-2xl shadow-slate-900/20">
+            <p class="text-[11px] uppercase tracking-[0.35em] text-amber-200/80">Cart Intelligence</p>
+            <h2 class="mt-2 text-2xl font-black">Khuyến nghị theo giỏ hàng</h2>
+            <p class="mt-2 text-sm text-slate-300">Danh sách này được sinh từ KB_Graph dựa trên sản phẩm đang có trong giỏ và hành vi chuyển tiếp phổ biến.</p>
+            <div id="ai-cart-insights" class="mt-5 space-y-3"></div>
+            <div id="ai-cart-suggestions" class="mt-5 space-y-4"></div>
+        </div>
     </main>
 
+    <script src="ai-ecommerce.js"></script>
     <script>
         const API = "http://localhost:8000/api";
         const userId = localStorage.getItem('userId');
@@ -44,13 +57,9 @@
             if (!userId) return window.location.href = 'index.html';
 
             try {
-                const [cartRes, bookRes] = await Promise.all([
-                    fetch(`${API}/carts/${userId}/`),
-                    fetch(`${API}/books/`)
-                ]);
+                const cartRes = await fetch(`${API}/carts/${userId}/`);
 
                 const cart = await cartRes.json();
-                const books = await bookRes.json();
                 const container = document.getElementById('cart-list');
 
                 if (!cart.items || cart.items.length === 0) {
@@ -59,46 +68,60 @@
                     return;
                 }
 
-                // Kết hợp dữ liệu sách vào item giỏ hàng để dễ xử lý
-                currentCartItems = cart.items.map(item => {
-                    const book = books.find(b => b.id === item.book_id) || { title: "Sách đã bị gỡ", price: 0 };
-                    return { ...item, book_title: book.title, book_price: Number(book.price) };
-                });
+                currentCartItems = cart.items;
+                window.__BOOKSTORE_CART_AI_PAYLOAD__ = {
+                    user_id: Number(userId),
+                    product_ids: currentCartItems.map(item => Number(item.product_id)).filter(Boolean),
+                    items: currentCartItems.map(item => ({
+                        product_id: Number(item.product_id),
+                        product_type: item.product_type,
+                    })),
+                    limit: 8,
+                };
 
                 container.innerHTML = currentCartItems.map(item => `
                     <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border mb-4">
                         <div class="flex items-center gap-4">
                             <input type="checkbox"
                                    class="item-checkbox w-6 h-6 cursor-pointer accent-indigo-600"
-                                   value="${item.book_id}"
-                                   data-subtotal="${item.book_price * item.quantity}"
+                                   value="${item.item_key}"
+                                   data-subtotal="${item.subtotal}"
                                    onchange="updateSelectedTotal()"
                                    checked>
 
                             <div class="flex-1">
-                                <h4 class="font-bold text-lg">${item.book_title}</h4>
-                                <p class="text-indigo-600">${item.book_price.toLocaleString()}đ</p>
+                                <div class="flex items-center gap-3">
+                                    <img src="${item.image_url || 'https://picsum.photos/seed/item-fallback/80/80'}" class="w-14 h-14 rounded-lg object-cover border" alt="${item.title}" onerror="this.onerror=null;this.src='https://picsum.photos/seed/item-fallback/80/80'">
+                                    <div>
+                                        <h4 class="font-bold text-lg">${item.title}</h4>
+                                        <p class="text-xs text-gray-500">${item.product_type.toUpperCase()} • ${item.subtitle || ''}</p>
+                                        <p class="text-indigo-600">${Number(item.price).toLocaleString()}đ</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-4">
                             <div class="flex items-center bg-white border rounded-xl overflow-hidden shadow-sm">
-                                <button onclick="decreaseQty(${item.book_id}, ${item.quantity})"
+                                <button onclick="decreaseQty('${item.product_type}', ${item.product_id}, ${item.quantity})"
                                         class="px-4 py-2 hover:bg-red-50 text-red-600 font-bold">-</button>
 
                                 <span class="px-4 py-2 border-x font-bold min-w-[50px] text-center">${item.quantity}</span>
 
-                                <button onclick="increaseQty(${item.book_id}, ${item.quantity})"
+                                <button onclick="increaseQty('${item.product_type}', ${item.product_id}, ${item.quantity})"
                                         class="px-4 py-2 hover:bg-green-50 text-green-600 font-bold">+</button>
                             </div>
 
-                            <button onclick="removeItem(${item.book_id})" class="text-gray-400 hover:text-red-600 p-2">
+                            <button onclick="removeItem('${item.product_type}', ${item.product_id})" class="text-gray-400 hover:text-red-600 p-2">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
                     </div>`).join('');
 
                 updateSelectedTotal(); // Tính tổng tiền lần đầu
+                if (window.BookstoreAI) {
+                    window.BookstoreAI.cart(window.__BOOKSTORE_CART_AI_PAYLOAD__).catch(() => {});
+                }
             } catch (e) { console.error("Lỗi:", e); }
         }
 
@@ -116,7 +139,7 @@
         function goToCheckout() {
             const checkboxes = document.querySelectorAll('.item-checkbox:checked');
             if (checkboxes.length === 0) {
-                alert("Vui lòng chọn ít nhất 1 cuốn sách để thanh toán!");
+                alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!");
                 return;
             }
 
@@ -125,18 +148,18 @@
             window.location.href = `checkout.html?items=${selectedIds}`;
         }
 
-        async function increaseQty(bookId, currentQty) {
+        async function increaseQty(productType, productId, currentQty) {
             const newQty = Number(currentQty) + 1;
-            await updateCartAPI(bookId, newQty);
+            await updateCartAPI(productType, productId, newQty);
         }
 
-        async function decreaseQty(bookId, currentQty) {
+        async function decreaseQty(productType, productId, currentQty) {
             const newQty = Number(currentQty) - 1;
-            if (newQty < 1) return removeItem(bookId);
-            await updateCartAPI(bookId, newQty);
+            if (newQty < 1) return removeItem(productType, productId);
+            await updateCartAPI(productType, productId, newQty);
         }
 
-        async function updateCartAPI(bookId, quantity) {
+        async function updateCartAPI(productType, productId, quantity) {
             const uid = localStorage.getItem('userId');
             if (!uid) return;
             try {
@@ -145,7 +168,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         customer_id: parseInt(uid),
-                        book_id: parseInt(bookId),
+                        product_type: productType,
+                        product_id: parseInt(productId),
                         quantity: parseInt(quantity),
                         mode: 'overwrite'
                     })
@@ -154,11 +178,11 @@
             } catch (e) { console.error("Lỗi kết nối:", e); }
         }
 
-        async function removeItem(bookId) {
+        async function removeItem(productType, productId) {
             const uid = localStorage.getItem('userId');
             if (!confirm("Xóa sản phẩm này khỏi giỏ hàng?")) return;
             try {
-                const res = await fetch(`${API}/carts/${uid}/items/${bookId}/`, {
+                const res = await fetch(`${API}/carts/${uid}/items/${productId}/?product_type=${productType}`, {
                     method: 'DELETE'
                 });
                 if (res.ok) loadCart();

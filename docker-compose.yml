@@ -1,10 +1,29 @@
-version: '3.8'
-
 services:
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: bookstore-neo4j
+    environment:
+      NEO4J_AUTH: "neo4j/neo4jpassword"
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    volumes:
+      - neo4j_data:/var/lib/neo4j/data
+      - neo4j_logs:/var/lib/neo4j/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api_gateway:
     build: ./api_gateway
     ports: ["8000:8000"]
     volumes: ["./api_gateway:/app"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
 
   customer-service:
     build: ./customer-service
@@ -61,6 +80,40 @@ services:
     ports: ["8011:8000"]
     volumes: ["./recommender-ai-service:/app"]
 
+  electronic-service:
+    build: electronic-service
+    ports: ["8012:8000"]
+    volumes: ["./electronic-service:/app"]
+
+  clothe-service:
+    build: ./clothe-service
+    ports: ["8013:8000"]
+    volumes: ["./clothe-service:/app"]
+
+  product-service:
+    build: ./product-service
+    ports: ["8014:8000"]
+    volumes: ["./product-service:/app"]
+    command: >
+      sh -c "python manage.py migrate --settings=config.settings.dev &&
+             python manage.py seed_categories --settings=config.settings.dev &&
+             python manage.py seed_products --settings=config.settings.dev &&
+             python manage.py runserver 0.0.0.0:8000 --settings=config.settings.dev"
+
+  healthcare-service:
+    build: ./healthcare-service
+    ports: ["8015:8015"]
+    volumes: ["./healthcare-service:/app"]
+    command: >
+      sh -c "python manage.py migrate --settings=config.settings.dev &&
+             python manage.py seed_healthcare_data --settings=config.settings.dev &&
+             python manage.py runserver 0.0.0.0:8015 --settings=config.settings.dev"
+
+
 networks:
   default:
     name: bookstore-network
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
